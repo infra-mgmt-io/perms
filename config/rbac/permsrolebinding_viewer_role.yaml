@@ -1,0 +1,20 @@
+# permissions for end users to view permsrolebindings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: permsrolebinding-viewer-role
+rules:
+- apiGroups:
+  - perms.infra-mgmt.io
+  resources:
+  - permsrolebindings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - perms.infra-mgmt.io
+  resources:
+  - permsrolebindings/status
+  verbs:
+  - get
