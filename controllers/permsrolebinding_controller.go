@@ -128,6 +128,12 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		logger.Error(err, "Failed to get Rolebinding")
 		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
 		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
+			Type:    "Available",
+			Status:  metav1.ConditionTrue,
+			Reason:  "Available",
+			Message: "Permissions Operator is available",
+		})
+		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 			Type:    "Degraded",
 			Status:  metav1.ConditionTrue,
 			Reason:  "Degraded",
@@ -146,6 +152,12 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		logger.Error(err, "Update immutable configuration (spec.kind || spec.Role)", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
 		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
 		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
+			Type:    "Available",
+			Status:  metav1.ConditionTrue,
+			Reason:  "Available",
+			Message: "Permissions Operator is available",
+		})
+		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 			Type:    "Degraded",
 			Status:  metav1.ConditionTrue,
 			Reason:  "Degraded",
@@ -154,6 +166,12 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		permsrolebinding = r.updateStatus(ctx, permsrolebinding, req)
 	} else {
 		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
+		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
+			Type:    "Available",
+			Status:  metav1.ConditionTrue,
+			Reason:  "Available",
+			Message: "Permissions Operator is available",
+		})
 		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 			Type:    "Degraded",
 			Status:  metav1.ConditionFalse,
@@ -176,6 +194,12 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		// update status
 		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
 		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
+			Type:    "Available",
+			Status:  metav1.ConditionTrue,
+			Reason:  "Available",
+			Message: "Permissions Operator is available",
+		})
+		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 			Type:    "Progressing",
 			Status:  metav1.ConditionTrue,
 			Reason:  "Progressing",
@@ -188,6 +212,12 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if err != nil {
 			logger.Error(err, "Failed to update RoleBinding", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
 			permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
+			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
+				Type:    "Available",
+				Status:  metav1.ConditionTrue,
+				Reason:  "Available",
+				Message: "Permissions Operator is available",
+			})	
 			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 				Type:    "Progressing",
 				Status:  metav1.ConditionFalse,
@@ -208,6 +238,12 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		//return ctrl.Result{Requeue: true}, nil
 	} else {
 		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
+		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
+			Type:    "Available",
+			Status:  metav1.ConditionTrue,
+			Reason:  "Available",
+			Message: "Permissions Operator is available",
+		})
 		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 			Type:    "Progressing",
 			Status:  metav1.ConditionFalse,
