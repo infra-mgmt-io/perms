@@ -97,7 +97,7 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				Message: "Permissions Operator task are degraded - create PermsRoleBinding",
 			})
 			r.updateCountsPermsRoleBinding(ctx, permsrolebinding, req)
-			r.updateStatus(ctx, permsrolebinding, req)
+			//r.updateStatus(ctx, permsrolebinding, req)
 			return ctrl.Result{RequeueAfter: time.Minute}, err
 		}
 		// Deployment created successfully - update status and requeue
@@ -122,7 +122,7 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			Message: "No Permissions Operator task are degraded",
 		})
 		r.updateCountsPermsRoleBinding(ctx, permsrolebinding, req)
-		r.updateStatus(ctx, permsrolebinding, req)
+		//r.updateStatus(ctx, permsrolebinding, req)
 		return ctrl.Result{Requeue: true}, nil
 	} else if err != nil {
 		logger.Error(err, "Failed to get Rolebinding")
@@ -164,7 +164,7 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			Message: "Permissions Operator task degraded, immutable Spec.Kind || Spec.Role changed",
 		})
 		permsrolebinding = r.updateStatus(ctx, permsrolebinding, req)
-	} else {
+	} else if !(errors.IsNotFound(err)) {
 		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
 		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 			Type:    "Available",
@@ -217,7 +217,7 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				Status:  metav1.ConditionTrue,
 				Reason:  "Available",
 				Message: "Permissions Operator is available",
-			})	
+			})
 			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 				Type:    "Progressing",
 				Status:  metav1.ConditionFalse,
@@ -236,7 +236,7 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 		r.updateCountsPermsRoleBinding(ctx, permsrolebinding, req)
 		//return ctrl.Result{Requeue: true}, nil
-	} else {
+	} else if !(errors.IsNotFound(err)) {
 		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
 		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
 			Type:    "Available",
