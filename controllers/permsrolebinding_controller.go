@@ -330,7 +330,7 @@ func (r *PermsRoleBindingReconciler) updateStatus(ctx context.Context, p *permsv
 	if err != nil {
 		logger.Error(err, "Unable to update Status")
 	}
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 	p = r.refreshPermsRoleBinding(ctx, p, req)
 	return p
 }

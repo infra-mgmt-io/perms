@@ -1,0 +1,24 @@
+# permissions for end users to edit permsclusterrolebindings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: permsclusterrolebinding-editor-role
+rules:
+- apiGroups:
+  - perms.infra-mgmt.io
+  resources:
+  - permsclusterrolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - perms.infra-mgmt.io
+  resources:
+  - permsclusterrolebindings/status
+  verbs:
+  - get
