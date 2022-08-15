@@ -1,0 +1,13 @@
+apiVersion: perms.infra-mgmt.io/v1beta1
+kind: PermsClusterRoleBinding
+metadata:
+  name: demo1
+spec:
+  role: edit
+  groups:
+    - group2
+  user:
+    - user1
+  serviceaccounts:
+    - name: default
+      namespace: permissions-operator

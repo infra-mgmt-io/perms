@@ -8,6 +8,32 @@ rules:
 - apiGroups:
   - perms.infra-mgmt.io
   resources:
+  - permsclusterrolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - perms.infra-mgmt.io
+  resources:
+  - permsclusterrolebindings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - perms.infra-mgmt.io
+  resources:
+  - permsclusterrolebindings/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - perms.infra-mgmt.io
+  resources:
   - permsrolebindings
   verbs:
   - create
@@ -31,6 +57,32 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  verbs:
+  - bind
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  verbs:
+  - bind
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

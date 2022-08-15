@@ -1,0 +1,20 @@
+apiVersion: perms.infra-mgmt.io/v1beta1
+kind: PermsClusterRoleBinding
+metadata:
+  name: permsclusterrolebinding-sample
+spec:
+  role: view
+  groups:
+    - group2
+    - group3
+    - group594933
+    - group12
+  user:
+    - user1
+    - user2
+    - user3
+  serviceaccounts:
+    - name: default
+      namespace: permissions-operator
+    - name: go-controller-manager
+      namespace: permissions-operator

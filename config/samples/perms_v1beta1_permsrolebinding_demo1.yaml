@@ -1,0 +1,16 @@
+apiVersion: perms.infra-mgmt.io/v1beta1
+kind: PermsRoleBinding
+metadata:
+  name: demo1
+spec:
+  role: perms-leader-election-role
+  kind: Role
+  groups:
+    - group1
+  user:
+    - user1
+  serviceaccounts:
+    - name: go-controller-manager
+      namespace: permissions-operator
+
+
