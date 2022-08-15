@@ -7,11 +7,12 @@ on:
     branches:
       - 'main'
       - 'develop'
+      - 'feat/*'
     tags:
       - 'v*.*.*'
   pull_request:
     branches:
-      - 'master'
+      - 'main'
       - 'develop'
 
 permissions: 
