@@ -61,9 +61,9 @@ jobs:
           # Docker tags based on the following events/attributes
           tags: |
             type=schedule
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern=v{{version}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=semver,pattern=v{{major}}
             type=sha
       - name: Operator bundle verify
         run: operator-sdk bundle validate ./bundle
