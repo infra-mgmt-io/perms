@@ -4,16 +4,8 @@ name: Build and Publish Operator Bundle
 on:
   workflow_dispatch:
   push:
-    #branches:
-    #  - 'main'
-    #  - 'develop'
-    #  - 'feat/*'
     tags:
       - 'v*.*.*'
-  #pull_request:
-  #  branches:
-  #    - 'main'
-  #    - 'develop'
 defaults:
   run:
     shell: bash
