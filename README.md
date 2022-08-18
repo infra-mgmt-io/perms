@@ -109,3 +109,36 @@ k get pcrb
 NAME                             USERS   GROUPS   SERVICEACCOUNTS   AVAILABLE   PROGRESSING   DEGRADED
 permsclusterrolebinding-sample   3       6        2                 True        False         False
 ````
+---
+
+## Release Process
+To set up a successful release we need several parts:
+
+###  create operator Bundle definition Files
+1. Create Bundle Files
+   - Option 1 Operator SDK Makefile:
+    ````
+    make bundle
+    `````
+   - Option 2 Manual kustomize + operator SDK Templating:
+    ````
+    VERSION=0.0.1-beta
+    CHANNEL=develop
+    RELEASENAME=initial
+    operator-sdk generate kustomize manifests -q
+    cd config/manager && kustomize edit set image controller=ghcr.io/infra-mgmt-io/perms:v$VERSION
+    cd ../..
+    kustomize build config/manifests | operator-sdk generate bundle -q --overwrite --version $VERSION --channels=$CHANNEL
+    operator-sdk bundle validate ./bundle
+    git add config/manager config/manifests/bases bundle bundle.Dockerfile 
+    ````
+
+2. Commit and Tag Changes
+   ````
+    git commit -m "feat(RELEASE): $VERSION $CHANNEL $RELEASENAME"
+    git tag -a v$VERSION -m "feat(RELEASE): $VERSION $CHANNEL $RELEASENAME"
+   ````
+
+3. Create Github Release
+   [Github Release Docs](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
+   
