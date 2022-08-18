@@ -1,4 +1,4 @@
-name: Docker Builds and Publish
+name: Build and Publish Operator Bundle
 
 # Controls when the workflow will run
 on:
@@ -14,7 +14,10 @@ on:
   #  branches:
   #    - 'main'
   #    - 'develop'
-
+defaults:
+  run:
+    shell: bash
+    
 permissions: 
   packages: write
   contents: read
@@ -46,6 +49,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Operator SDK
         run: |
+
           export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac) \
           export OS=$(uname | awk '{print tolower($0)}') \
           export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/download/v1.22.2 \
