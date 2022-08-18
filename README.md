@@ -137,8 +137,10 @@ To set up a successful release we need several parts:
    ````
     git commit -m "feat(RELEASE): $VERSION $CHANNEL $RELEASENAME"
     git tag -a v$VERSION -m "feat(RELEASE): $VERSION $CHANNEL $RELEASENAME"
+    git push
+    git push origin v$VERSION
    ````
 
 3. Create Github Release
    [Github Release Docs](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
-   
+
