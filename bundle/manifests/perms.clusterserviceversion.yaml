@@ -1,0 +1,342 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "perms.infra-mgmt.io/v1beta1",
+          "kind": "PermsClusterRoleBinding",
+          "metadata": {
+            "name": "permsclusterrolebinding-sample"
+          },
+          "spec": {
+            "groups": [
+              "group2",
+              "group3",
+              "group594933",
+              "group12"
+            ],
+            "role": "view",
+            "serviceaccounts": [
+              {
+                "name": "default",
+                "namespace": "permissions-operator"
+              },
+              {
+                "name": "go-controller-manager",
+                "namespace": "permissions-operator"
+              }
+            ],
+            "user": [
+              "user1",
+              "user2",
+              "user3"
+            ]
+          }
+        },
+        {
+          "apiVersion": "perms.infra-mgmt.io/v1beta1",
+          "kind": "PermsRoleBinding",
+          "metadata": {
+            "name": "edit"
+          },
+          "spec": {
+            "groups": [
+              "group1",
+              "group2",
+              "group3",
+              "group594933",
+              "group12"
+            ],
+            "kind": "Role",
+            "role": "perms-leader-election-role",
+            "serviceaccounts": [
+              {
+                "name": "default",
+                "namespace": "permissions-operator"
+              },
+              {
+                "name": "go-controller-manager",
+                "namespace": "permissions-operator"
+              }
+            ],
+            "user": [
+              "user1",
+              "user2",
+              "user3"
+            ]
+          }
+        }
+      ]
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.22.2
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+  name: perms.v0.0.1-beta
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: PermsClusterRoleBinding is the Schema for the permsclusterrolebindings
+        API
+      displayName: Perms Cluster Role Binding
+      kind: PermsClusterRoleBinding
+      name: permsclusterrolebindings.perms.infra-mgmt.io
+      version: v1beta1
+    - description: PermsRoleBinding is the Schema for the permsrolebindings API
+      displayName: Perms Role Binding
+      kind: PermsRoleBinding
+      name: permsrolebindings.perms.infra-mgmt.io
+      version: v1beta1
+  description: Automated Permissions Operator for managing User and Group (Cluster)
+    Rolebindings in a CRD
+  displayName: Perms Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - perms.infra-mgmt.io
+          resources:
+          - permsclusterrolebindings
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - perms.infra-mgmt.io
+          resources:
+          - permsclusterrolebindings/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - perms.infra-mgmt.io
+          resources:
+          - permsclusterrolebindings/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - perms.infra-mgmt.io
+          resources:
+          - permsrolebindings
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - perms.infra-mgmt.io
+          resources:
+          - permsrolebindings/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - perms.infra-mgmt.io
+          resources:
+          - permsrolebindings/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          verbs:
+          - bind
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles
+          verbs:
+          - bind
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - rolebindings
+          verbs:
+          - bind
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: perms-controller-manager
+      deployments:
+      - label:
+          control-plane: controller-manager
+        name: perms-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy: {}
+          template:
+            metadata:
+              annotations:
+                kubectl.kubernetes.io/default-container: manager
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=0
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.11.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                  protocol: TCP
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 5m
+                    memory: 64Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+              - args:
+                - --health-probe-bind-address=:8081
+                - --metrics-bind-address=127.0.0.1:8080
+                - --leader-elect
+                command:
+                - /manager
+                image: ghcr.io/infra-mgmt-io/perms:v0.0.1-beta
+                livenessProbe:
+                  httpGet:
+                    path: /healthz
+                    port: 8081
+                  initialDelaySeconds: 15
+                  periodSeconds: 20
+                name: manager
+                readinessProbe:
+                  httpGet:
+                    path: /readyz
+                    port: 8081
+                  initialDelaySeconds: 5
+                  periodSeconds: 10
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
+                  requests:
+                    cpu: 10m
+                    memory: 64Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+              securityContext:
+                runAsNonRoot: true
+              serviceAccountName: perms-controller-manager
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: perms-controller-manager
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - permissions
+  - crd
+  - clusterrolebinding
+  - rolebinding
+  - user
+  - group
+  links:
+  - name: Perms
+    url: https://perms.domain
+  maintainers:
+  - email: christian.spies@automit.de
+    name: Christian Spies
+  - email: lukas.babohn@automit.de
+    name: Lukas Babohn
+  - email: michael.kamleiter@automit.de
+    name: Michael Kamleiter
+  maturity: alpha
+  provider:
+    name: infra-mgmt.io
+    url: https://github.com/infra-mgmt-io
+  version: 0.0.1-beta

@@ -1,0 +1,64 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: perms.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: PermsClusterRoleBinding is the Schema for the permsclusterrolebindings
+        API
+      displayName: Perms Cluster Role Binding
+      kind: PermsClusterRoleBinding
+      name: permsclusterrolebindings.perms.infra-mgmt.io
+      version: v1beta1
+    - description: PermsRoleBinding is the Schema for the permsrolebindings API
+      displayName: Perms Role Binding
+      kind: PermsRoleBinding
+      name: permsrolebindings.perms.infra-mgmt.io
+      version: v1beta1
+  description: Automated Permissions Operator for managing User and Group (Cluster)
+    Rolebindings in a CRD
+  displayName: Perms Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - permissions
+  - crd
+  - clusterrolebinding
+  - rolebinding
+  - user
+  - group
+  links:
+  - name: Perms
+    url: https://perms.domain
+  maintainers:
+  - email: christian.spies@automit.de
+    name: Christian Spies
+  - email: lukas.babohn@automit.de
+    name: Lukas Babohn
+  - email: michael.kamleiter@automit.de
+    name: Michael Kamleiter
+  maturity: alpha
+  provider:
+    name: infra-mgmt.io
+    url: https://github.com/infra-mgmt-io
+  version: 0.0.0
