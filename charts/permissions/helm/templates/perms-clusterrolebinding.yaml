@@ -1,0 +1,28 @@
+{{- range $clusterpermission := .Values.clusterpermissions }}
+apiVersion: perms.infra-mgmt.io/v1beta1
+kind: PermsClusterRoleBinding
+metadata:
+  name: "{{$clusterpermission.name}}"
+  labels:
+    app.kubernetes.io/name: {{ $.Chart.Name }}
+    helm.sh/chart: {{ $.Chart.Name }}-{{ $.Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service}}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/version: {{ $.Chart.AppVersion}}
+spec:
+  role: "{{$clusterpermission.role}}"
+  groups:
+  {{- range $group := $clusterpermission.groups}}
+    - {{$group}}
+  {{- end }}
+  user:
+    {{- range $user := $clusterpermission.user}}
+    - {{$user}}
+  {{- end }}
+  serviceaccounts:
+  {{- range $sa := $clusterpermission.serviceaccounts}}
+    - name: "{{$sa.name}}"
+      namespace: "{{$sa.namespace}}"
+  {{- end}}
+
+{{- end}}
