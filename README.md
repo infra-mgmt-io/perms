@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/infra-mgmt-io/perms/actions/workflows/docker-build-and-publish.yml/badge.svg)](https://github.com/infra-mgmt-io/perms/actions/workflows/docker-build-and-publish.yml)
 [![License](http://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+[![Build and Publish Operator Bundle](https://github.com/infra-mgmt-io/perms/actions/workflows/operator-bundle-build-and-publish.yml/badge.svg)](https://github.com/infra-mgmt-io/perms/actions/workflows/operator-bundle-build-and-publish.yml)
 
 ----
 
