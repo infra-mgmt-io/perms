@@ -1,6 +1,30 @@
 # Permissions are namespace scoped an are always applied in the helm namespace
 permissions:
   - name: permissionsrole # The name of the created PermsRoleBinding and rolebinding
+    namespaces: # A list of where those permissions should be created. if empty, the release namespace will be selected
+      - namespace1
+      - namespace2
+      - namespace3
+      - namespace4
+    role: 
+      name: view  # The referenced role name
+      kind: ClusterRole # The referenced role kind
+    groups: # A list of groups which should get the role assigned
+      - group1
+      - group2
+      - group3
+      - group5
+      - group12
+    user: # A list of users which should get the role assigned
+      - user1
+      - user2
+      - user3
+    serviceaccounts: # A list of serviceaccounts which should get the role assigned
+      - name: default
+        namespace: permissions-operator
+      - name: go-controller-manager
+        namespace: permissions-operator
+  - name: permissionsrole # The name of the created PermsRoleBinding and rolebinding
     role: 
       name: edit  # The referenced role name
       kind: ClusterRole # The referenced role kind

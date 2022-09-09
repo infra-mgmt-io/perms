@@ -4,11 +4,11 @@ kind: PermsClusterRoleBinding
 metadata:
   name: "{{$clusterpermission.name}}"
   labels:
-    app.kubernetes.io/name: {{ $.Chart.Name }}
+    app.kubernetes.io/name: {{ $.Chart.Name | quote}}
     helm.sh/chart: {{ $.Chart.Name }}-{{ $.Chart.Version | replace "+" "_" }}
-    app.kubernetes.io/managed-by: {{ $.Release.Service}}
-    app.kubernetes.io/instance: {{ $.Release.Name }}
-    app.kubernetes.io/version: {{ $.Chart.AppVersion}}
+    app.kubernetes.io/managed-by: {{ $.Release.Service | quote}}
+    app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+    app.kubernetes.io/version: {{ $.Chart.AppVersion | quote}}
 spec:
   role: "{{$clusterpermission.role}}"
   groups:
