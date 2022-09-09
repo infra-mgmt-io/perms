@@ -1,0 +1,10 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: perms-operator
+spec:
+  channel: develop
+  name: perms
+  source: {{ .Values.catalog_name }}
+  sourceNamespace: {{ .Values.catalog_namespace }}
+  installPlanApproval: Manual

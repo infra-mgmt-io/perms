@@ -1,0 +1,13 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: {{ .Values.catalog_name }}
+  namespace: {{ .Values.catalog_namespace }}
+spec:
+  sourceType: grpc
+  image: {{ .Values.catalog_image }}
+  displayName: Perms Catalog
+  publisher: automIT AG
+  updateStrategy:
+    registryPoll:
+      interval: 10m

@@ -1,0 +1,3 @@
+catalog_image: docker.io/kamleitermichael/perms-catalog:v0.0.1
+catalog_namespace: olm
+catalog_name:  perms-operators
