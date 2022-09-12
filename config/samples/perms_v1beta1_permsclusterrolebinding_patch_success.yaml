@@ -1,0 +1,7 @@
+spec:
+  groups:
+    - group2
+    - group1337
+  user:
+    - user1
+    - newuser

@@ -26,7 +26,6 @@ import (
 	permsv1beta1 "github.com/infra-mgmt-io/perms/api/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -69,189 +68,50 @@ func (r *PermsClusterRoleBindingReconciler) Reconcile(ctx context.Context, req c
 
 	// Check if the binding already exists, if not create a new one
 	bindings := &rbacv1.ClusterRoleBinding{}
-	err = r.Get(ctx, types.NamespacedName{Name: permsclusterrolebinding.Name}, bindings)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new ClusterRoleBinding
+	if clusterBindingExistsErr := r.Get(ctx, types.NamespacedName{Name: permsclusterrolebinding.Name}, bindings); clusterBindingExistsErr != nil {
 		logger.Info("Creating a new ClusterRolebinding", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name ", permsclusterrolebinding.Name)
+		// Define a new ClusterRoleBinding
 		rb := r.clusterRolebindingForPerms(permsclusterrolebinding, ctx)
-		err = r.Create(ctx, rb)
-		if err != nil {
+		setProgressingStatus(ctx, &permsclusterrolebinding.Status.Conditions)
+		if err = r.Create(ctx, rb); err != nil {
 			logger.Error(err, "Failed to create new ClusterRoleBinding. Check if role exists.", "ClusterRolebinding.Namespace", rb.Namespace, "ClusterRolebinding.Name", rb.Name)
-			// Update state and configure progressing
-			permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-			meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Available",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Available",
-				Message: "Permissions Operator is available",
-			})
-			meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Progressing",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Progressing",
-				Message: "Permissions Operator tasks are progressing - create PermsClusterRoleBinding",
-			})
-			meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Degraded",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Degraded",
-				Message: "Permissions Operator task are degraded - create PermsClusterRoleBinding",
-			})
-			r.updateCountsPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
+			setHoustonWeHaveAProblemStatus(ctx, &permsclusterrolebinding.Status.Conditions)
 			return ctrl.Result{RequeueAfter: time.Minute}, err
 		}
-		// Deployment created successfully - update status and requeue
-		// Update state and configure progressing
-		permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Progressing",
-			Message: "No Permissions Operator tasks are progressing",
-		})
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Degraded",
-			Message: "No Permissions Operator task are degraded",
-		})
-		r.updateCountsPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		logger.Error(err, "Failed to get ClusterRolebinding")
-		permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Degraded",
-			Message: "Permissions Operator (create) task are degraded",
-		})
-		r.updatePermsClusterRoleBindingStatus(ctx, permsclusterrolebinding, req)
-		return ctrl.Result{}, err
-	}
 
-	// Check, if updates on immutable parts of Clusterrolebinding are configured
-	err = r.Get(ctx, req.NamespacedName, permsclusterrolebinding)
-	if err != nil {
-		logger.Error(err, "Failed to update ClusterRoleBinding - update cache failed", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
-	}
-	if bindings.RoleRef.Name != permsclusterrolebinding.Spec.Role {
-		logger.Error(err, "Update immutable configuration (spec.Role)", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
-		permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Degraded",
-			Message: "Permissions Operator task degraded, immutable Spec.Role changed",
-		})
-		permsclusterrolebinding = r.updatePermsClusterRoleBindingStatus(ctx, permsclusterrolebinding, req)
-	} else if !(errors.IsNotFound(err)) {
-		permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Degraded",
-			Message: "No Permissions Operator task are degraded",
-		})
-		permsclusterrolebinding = r.updatePermsClusterRoleBindingStatus(ctx, permsclusterrolebinding, req)
-	}
-
-	// Update ClusterRolebinding
-	subs := subsForPermsClusterRoleBindings(permsclusterrolebinding)
-	err = r.Get(ctx, req.NamespacedName, permsclusterrolebinding)
-	if err != nil {
-		logger.Error(err, "Failed to update ClusterRolebinding - update cache failed", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
-	}
-	if !reflect.DeepEqual(bindings.Subjects, subs) {
-		logger.Info("Updating ClusterRolebinding", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
-		//logger.Info("Debug", "bindings.Subjects", bindings.Subjects, "ClusterRolebinding.Name", ClusterRolebinding.Name)
-		//logger.Info("Debug", "subs", subs, "ClusterRolebinding.Name ", ClusterRolebinding.Name)
-		// update status
-		permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Progressing",
-			Message: "Permissions Operator (update) tasks are progressing",
-		})
-		bindings.Subjects = subs
-
-		permsclusterrolebinding = r.updatePermsClusterRoleBindingStatus(ctx, permsclusterrolebinding, req)
-		err = r.Update(ctx, bindings)
-		if err != nil {
-			logger.Error(err, "Failed to update ClusterRolebinding", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
-			permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-			meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Available",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Available",
-				Message: "Permissions Operator is available",
-			})
-			meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Progressing",
-				Status:  metav1.ConditionFalse,
-				Reason:  "Progressing",
-				Message: "No Permissions Operator tasks are progressing",
-			})
-			meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Degraded",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Degraded",
-				Message: "Permissions Operator (update) task are degraded",
-			})
-			r.updatePermsClusterRoleBindingStatus(ctx, permsclusterrolebinding, req)
-			return ctrl.Result{}, err
+	} else {
+		// Check, if updates on immutable parts of rolebinding are configured
+		// if so - leave the reconcile loop
+		if bindings.RoleRef.Name != permsclusterrolebinding.Spec.Role {
+			logger.Error(err, "Update immutable configuration (spec.Role)", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
+			setHoustonWeHaveAProblemStatus(ctx, &permsclusterrolebinding.Status.Conditions)
+			if updateErr := r.Status().Update(ctx, permsclusterrolebinding); updateErr != nil {
+				logger.Error(updateErr, "Update rolebinding status failed")
+			}
+			return ctrl.Result{Requeue: false}, err
 		}
+		// Update ClusterRolebinding
+		subs := subsForPermsClusterRoleBindings(permsclusterrolebinding)
 
-		r.updateCountsPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		//return ctrl.Result{Requeue: true}, nil
-	} else if !(errors.IsNotFound(err)) {
-		permsclusterrolebinding = r.refreshPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsclusterrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Progressing",
-			Message: "No Permissions Operator tasks are progressing",
-		})
-		r.updatePermsClusterRoleBindingStatus(ctx, permsclusterrolebinding, req)
+		if !reflect.DeepEqual(bindings.Subjects, subs) {
+			logger.Info("Updating ClusterRolebinding", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
+			setProgressingStatus(ctx, &permsclusterrolebinding.Status.Conditions)
+			bindings.Subjects = subs
+			if err := r.Update(ctx, bindings); err != nil {
+				logger.Error(err, "Failed to update ClusterRolebinding", "ClusterRolebinding.Namespace", permsclusterrolebinding.Namespace, "ClusterRolebinding.Name", permsclusterrolebinding.Name)
+				setHoustonWeHaveAProblemStatus(ctx, &permsclusterrolebinding.Status.Conditions)
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
+	// update the Resource Status
+	r.updateCountsPermsClusterRoleBinding(ctx, permsclusterrolebinding, req)
+	setEverythingIsFineStatus(ctx, &permsclusterrolebinding.Status.Conditions)
+	if updateErr := r.Status().Update(ctx, permsclusterrolebinding); updateErr != nil {
+		logger.Error(updateErr, "Update rolebinding status failed")
+	}
+	// return nil to stop reconcile loop
 	return ctrl.Result{}, nil
 }
 
@@ -322,36 +182,15 @@ func subsForPermsClusterRoleBindings(p *permsv1beta1.PermsClusterRoleBinding) []
 	return subs
 }
 
-// Update the status
-func (r *PermsClusterRoleBindingReconciler) updatePermsClusterRoleBindingStatus(ctx context.Context, p *permsv1beta1.PermsClusterRoleBinding, req ctrl.Request) *permsv1beta1.PermsClusterRoleBinding {
-	err := r.Status().Update(ctx, p)
-	if err != nil {
-		logger.Error(err, "Unable to update Status")
-	}
-	time.Sleep(5 * time.Second)
-	p = r.refreshPermsClusterRoleBinding(ctx, p, req)
-	return p
-}
-
-// Update the Perms custom ressource status
-func (r *PermsClusterRoleBindingReconciler) refreshPermsClusterRoleBinding(ctx context.Context, p *permsv1beta1.PermsClusterRoleBinding, req ctrl.Request) *permsv1beta1.PermsClusterRoleBinding {
-	permsclusterrolebinding := &permsv1beta1.PermsClusterRoleBinding{}
-	err := r.Get(ctx, req.NamespacedName, permsclusterrolebinding)
-	if err != nil {
-		logger.Error(err, "Unable to update Cache")
-	}
-	return permsclusterrolebinding
-}
-
 func (r *PermsClusterRoleBindingReconciler) updateCountsPermsClusterRoleBinding(ctx context.Context, p *permsv1beta1.PermsClusterRoleBinding, req ctrl.Request) {
-	p = r.refreshPermsClusterRoleBinding(ctx, p, req)
 	if p.Status.Count.Users != strconv.Itoa(len(p.Spec.Users)) ||
 		p.Status.Count.Groups != strconv.Itoa(len(p.Spec.Groups)) ||
 		p.Status.Count.Serviceaccounts != strconv.Itoa(len(p.Spec.Serviceaccounts)) {
+
 		p.Status.Count.Users = strconv.Itoa(len(p.Spec.Users))
 		p.Status.Count.Groups = strconv.Itoa(len(p.Spec.Groups))
 		p.Status.Count.Serviceaccounts = strconv.Itoa(len(p.Spec.Serviceaccounts))
-		r.updatePermsClusterRoleBindingStatus(ctx, p, req)
+
 	}
 }
 
