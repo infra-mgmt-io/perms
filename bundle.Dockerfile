@@ -6,7 +6,8 @@ LABEL operators.operatorframework.io.bundle.manifests.v1=manifests/
 LABEL operators.operatorframework.io.bundle.metadata.v1=metadata/
 LABEL operators.operatorframework.io.bundle.package.v1=perms
 LABEL operators.operatorframework.io.bundle.channels.v1=develop
-LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.22.2
+LABEL operators.operatorframework.io.bundle.channel.default.v1=develop
+LABEL operators.operatorframework.io.metrics.builder=operator-sdk-v1.23.0
 LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
 LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v3
 

@@ -70,9 +70,9 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.22.2
+    operators.operatorframework.io/builder: operator-sdk-v1.23.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
-  name: perms.v0.0.1-beta
+  name: perms.v0.0.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -247,7 +247,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: ghcr.io/infra-mgmt-io/perms:v0.0.1-beta
+                image: ghcr.io/infra-mgmt-io/perms:v0.0.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -339,4 +339,4 @@ spec:
   provider:
     name: infra-mgmt.io
     url: https://github.com/infra-mgmt-io
-  version: 0.0.1-beta
+  version: 0.0.2

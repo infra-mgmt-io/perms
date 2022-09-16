@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/infra-mgmt-io/perms
-  newTag: v0.0.1-beta
+  newTag: v0.0.2
