@@ -46,7 +46,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: get version to build
         if: "contains(github.ref_type, 'branch')"
-        run: echo "RELEASEVERSION=0.0.1-${{ github.ref_name | rev | cut -d '/' -f 1 | rev }}" >> $GITHUB_ENV
+        run: |
+          echo "RELEASEVERSION=0.0.1-$(echo ${{ github.ref_name}} | rev | cut -d '/' -f1 | rev)" >> $GITHUB_ENV
       - name: get version to build
         if: "contains(github.ref_type, 'tag')"
         run: echo "RELEASEVERSION=${{ github.ref_name }}" >> $GITHUB_ENV
