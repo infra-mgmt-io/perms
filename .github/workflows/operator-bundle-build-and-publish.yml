@@ -62,22 +62,6 @@ jobs:
       - name: get version to build
         if: "contains(github.ref_type, 'tag')"
         run: echo "RELEASEVERSION=${{ github.ref_name }}" >> $GITHUB_ENV
-      - name: Docker meta
-        id: taggingbundle # you'll use this in the next step
-        uses: docker/metadata-action@v3
-        with:
-          # list of Docker images to use as base name for tags
-          images: |
-            ghcr.io/infra-mgmt-io/perms-bundle
-          # Docker tags based on the following events/attributes
-          tags: |
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=tag
-            type=ref,event=pr
-            type=semver,pattern={{raw}}
-            type=semver,pattern={{raw}},value=${{ env.RELEASEVERSION}}
-            type=sha
       - name: build operator bundle
         run: |
           export WORKINGDIR=`pwd`
@@ -98,24 +82,3 @@ jobs:
           chmod +x ${LOCALBIN}opm
           ${LOCALBIN}opm index add --container-tool docker --mode semver --tag ${CATALOG_IMG} --bundles ${BUNDLE_IMG}
           docker push ${CATALOG_IMG}
-      # - name: Operator bundle verify
-      #   run: operator-sdk bundle validate ./bundle
-      # - name: Build and push
-      #   uses: docker/build-push-action@v2
-      #   with:
-      #     context: .
-      #     file: bundle.Dockerfile
-      #     platforms: linux/amd64
-      #     push: ${{ github.event_name != 'pull_request' }}
-      #     tags: ${{ steps.taggingbundle.outputs.tags }}
-      #     labels: ${{ steps.taggingbundle.outputs.labels }}
-      # - name: build catalog
-      #   run: |
-      #     export WORKINGDIR=`pwd`
-      #     export LOCALBIN=${WORKINGDIR}/bin/
-      #     curl -sSLo ${LOCALBIN}opm https://github.com/operator-framework/operator-registry/releases/download/v1.26.1/linux-amd64-opm
-      #     chmod +x ${LOCALBIN}opm
-      #     export BUNDLE_IMG=ghcr.io/infra-mgmt-io/perms-bundle:v0.0.2
-      #     export CATALOG_IMG=ghcr.io/infra-mgmt-io/perms-catalog:v0.0.2
-      #     ${LOCALBIN}opm index add --container-tool docker --mode semver --tag ${CATALOG_IMG} --bundles ${BUNDLE_IMG}
-      #     docker push ${CATALOG_IMG}
