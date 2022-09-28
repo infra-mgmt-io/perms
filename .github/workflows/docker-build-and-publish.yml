@@ -47,7 +47,7 @@ jobs:
       - name: get version to build
         if: "contains(github.ref_type, 'branch')"
         run: |
-          echo "RELEASEVERSION=0.0.1-$(echo ${{ github.ref_name}} | tr '/' '+')" >> $GITHUB_ENV
+          echo "RELEASEVERSION=0.0.1-$(echo ${{ github.ref_name}} | tr '/' '-')" >> $GITHUB_ENV
       - name: get version to build
         if: "contains(github.ref_type, 'tag')"
         run: echo "RELEASEVERSION=${{ github.ref_name }}" >> $GITHUB_ENV
