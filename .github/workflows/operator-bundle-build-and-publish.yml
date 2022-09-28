@@ -77,7 +77,7 @@ jobs:
           export LOCALBIN=${WORKINGDIR}/bin/
           export KUSTOMIZE_INSTALL_SCRIPT="https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
           export KUSTOMIZE_VERSION=4.5.7
-          export VERSION=0.0.2
+          export VERSION=0.0.1-
           export CHANNEL=develop
           export IMAGE_TAG_BASE=ghcr.io/infra-mgmt-io/perms
           export BUNDLE_CHANNELS=--channels=${CHANNEL}
