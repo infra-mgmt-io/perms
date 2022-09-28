@@ -55,6 +55,13 @@ jobs:
           gpg -u "Operator SDK (release) <cncf-operator-sdk@cncf.io>" --verify checksums.txt.asc && \
           grep operator-sdk_${OS}_${ARCH} checksums.txt | sha256sum -c - && \
           chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
+      - name: get version to build
+        if: "contains(github.ref_type, 'branch')"
+        run: |
+          echo "RELEASEVERSION=0.0.1-$(echo ${{ github.ref_name}} | tr '/' '-')" >> $GITHUB_ENV
+      - name: get version to build
+        if: "contains(github.ref_type, 'tag')"
+        run: echo "RELEASEVERSION=${{ github.ref_name }}" >> $GITHUB_ENV
       - name: Docker meta
         id: taggingbundle # you'll use this in the next step
         uses: docker/metadata-action@v3
@@ -69,24 +76,14 @@ jobs:
             type=ref,event=tag
             type=ref,event=pr
             type=semver,pattern={{raw}}
-            type=semver,pattern={{raw}},value=v0.0.2
+            type=semver,pattern={{raw}},value=${{ env.RELEASEVERSION}}
             type=sha
       - name: build operator bundle
         run: |
           export WORKINGDIR=`pwd`
           export LOCALBIN=${WORKINGDIR}/bin/
-          export KUSTOMIZE_INSTALL_SCRIPT="https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
-          export KUSTOMIZE_VERSION=4.5.7
-          export VERSION=0.0.2
-          export CHANNEL=develop
-          export IMAGE_TAG_BASE=ghcr.io/infra-mgmt-io/perms
-          export BUNDLE_CHANNELS=--channels=${CHANNEL}
-          export BUNDLE_DEFAULT_CHANNEL=--default-channel=${CHANNEL}
-          export BUNDLE_METADATA_OPTS="${BUNDLE_CHANNELS} ${BUNDLE_DEFAULT_CHANNEL}"
-          export BUNDLE_IMG=${IMAGE_TAG_BASE}-bundle:v${VERSION}
-          export CATALOG_IMG="${IMAGE_TAG_BASE}-catalog:v${VERSION}"
-          export IMG=ghcr.io/infra-mgmt-io/perms:v${VERSION}
-          export BUNDLE_GEN_FLAGS="-q --overwrite --version ${VERSION} ${BUNDLE_METADATA_OPTS}"
+          export VERSION=${{ env.RELEASEVERSION}}
+          source .pipelineenv
           mkdir -p ${LOCALBIN}
           rm -f ${LOCALBIN}/kustomize
           curl -s ${KUSTOMIZE_INSTALL_SCRIPT} | bash -s -- ${KUSTOMIZE_VERSION} ${LOCALBIN}

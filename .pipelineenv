@@ -1,0 +1,10 @@
+KUSTOMIZE_INSTALL_SCRIPT="https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+KUSTOMIZE_VERSION=4.5.7
+CHANNEL=develop
+IMAGE_TAG_BASE=ghcr.io/infra-mgmt-io/perms
+BUNDLE_CHANNELS=--channels=${CHANNEL}
+BUNDLE_DEFAULT_CHANNEL=--default-channel=${CHANNEL}
+BUNDLE_METADATA_OPTS="${BUNDLE_CHANNELS} ${BUNDLE_DEFAULT_CHANNEL}"
+BUNDLE_IMG=${IMAGE_TAG_BASE}-bundle:v${VERSION}
+CATALOG_IMG="${IMAGE_TAG_BASE}-catalog:v${VERSION}"
+export BUNDLE_GEN_FLAGS="-q --overwrite --version ${VERSION} ${BUNDLE_METADATA_OPTS}"
