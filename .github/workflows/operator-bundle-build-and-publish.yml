@@ -66,7 +66,7 @@ jobs:
         run: |
           export WORKINGDIR=`pwd`
           export LOCALBIN=${WORKINGDIR}/bin/
-          export VERSION=${{ env.RELEASEVERSION}}
+          export VERSION=v${{ env.RELEASEVERSION}}
           source .pipelineenv
           mkdir -p ${LOCALBIN}
           rm -f ${LOCALBIN}/kustomize
