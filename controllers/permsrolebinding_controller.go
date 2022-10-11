@@ -26,7 +26,6 @@ import (
 	permsv1beta1 "github.com/infra-mgmt-io/perms/api/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -54,7 +53,7 @@ var logger logr.Logger
 func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger = log.FromContext(ctx)
 
-	// "Verify if a CRD of Permissions exists"
+	// Verify if a CRD of Permissions exists
 	permsrolebinding := &permsv1beta1.PermsRoleBinding{}
 	err := r.Get(ctx, req.NamespacedName, permsrolebinding)
 	if err != nil {
@@ -68,198 +67,53 @@ func (r *PermsRoleBindingReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Check if the binding already exists, if not create a new one
 	bindings := &rbacv1.RoleBinding{}
-	err = r.Get(ctx, types.NamespacedName{Name: permsrolebinding.Name, Namespace: permsrolebinding.Namespace}, bindings)
-	if err != nil && errors.IsNotFound(err) {
-		// Define a new RoleBinding
+	if bindingExistsErr := r.Get(ctx, types.NamespacedName{Name: permsrolebinding.Name, Namespace: permsrolebinding.Namespace}, bindings); bindingExistsErr != nil {
 		logger.Info("Creating a new Rolebinding", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name ", permsrolebinding.Name)
+		// Define a new RoleBinding
 		rb := r.rolebindingForPerms(permsrolebinding, ctx)
-		err = r.Create(ctx, rb)
-		if err != nil {
-			logger.Error(err, "Failed to create new RoleBinding. Check if role exists.", "Rolebinding.Namespace", rb.Namespace, "Rolebinding.Name", rb.Name)
-			// Update state and configure progressing
-			permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Available",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Available",
-				Message: "Permissions Operator is available",
-			})
-			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Progressing",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Progressing",
-				Message: "Permissions Operator tasks are progressing - create PermsRoleBinding",
-			})
-			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Degraded",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Degraded",
-				Message: "Permissions Operator task are degraded - create PermsRoleBinding",
-			})
-			r.updateCountsPermsRoleBinding(ctx, permsrolebinding, req)
-			//r.updateStatus(ctx, permsrolebinding, req)
+		setProgressingStatus(ctx, &permsrolebinding.Status.Conditions)
+		if err = r.Create(ctx, rb); err != nil {
+			logger.Error(err, "Failed to create RoleBinding", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
+			setHoustonWeHaveAProblemStatus(ctx, &permsrolebinding.Status.Conditions)
 			return ctrl.Result{RequeueAfter: time.Minute}, err
 		}
-		// Deployment created successfully - update status and requeue
-		// Update state and configure progressing
-		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Progressing",
-			Message: "No Permissions Operator tasks are progressing",
-		})
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Degraded",
-			Message: "No Permissions Operator task are degraded",
-		})
-		r.updateCountsPermsRoleBinding(ctx, permsrolebinding, req)
-		//r.updateStatus(ctx, permsrolebinding, req)
-		return ctrl.Result{Requeue: true}, nil
-	} else if err != nil {
-		logger.Error(err, "Failed to get Rolebinding")
-		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Degraded",
-			Message: "Permissions Operator (create) task are degraded",
-		})
-		r.updateStatus(ctx, permsrolebinding, req)
-		return ctrl.Result{}, err
-	}
-
-	// Check, if updates on immutable parts of rolebinding are configured
-	err = r.Get(ctx, req.NamespacedName, permsrolebinding)
-	if err != nil {
-		logger.Error(err, "Failed to update RoleBinding - update cache failed", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
-	}
-	if bindings.RoleRef.Kind != permsrolebinding.Spec.Kind || bindings.RoleRef.Name != permsrolebinding.Spec.Role {
-		logger.Error(err, "Update immutable configuration (spec.kind || spec.Role)", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
-		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Degraded",
-			Message: "Permissions Operator task degraded, immutable Spec.Kind || Spec.Role changed",
-		})
-		permsrolebinding = r.updateStatus(ctx, permsrolebinding, req)
-	} else if !(errors.IsNotFound(err)) {
-		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Degraded",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Degraded",
-			Message: "No Permissions Operator task are degraded",
-		})
-		permsrolebinding = r.updateStatus(ctx, permsrolebinding, req)
-	}
-
-	// Update rolebinding
-	subs := subsForPermsRoleBindings(permsrolebinding)
-	err = r.Get(ctx, req.NamespacedName, permsrolebinding)
-	if err != nil {
-		logger.Error(err, "Failed to update RoleBinding - update cache failed", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
-	}
-	if !reflect.DeepEqual(bindings.Subjects, subs) {
-		logger.Info("Updating rolebinding", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
-		//logger.Info("Debug", "bindings.Subjects", bindings.Subjects, "Rolebinding.Name", Rolebinding.Name)
-		//logger.Info("Debug", "subs", subs, "Rolebinding.Name ", Rolebinding.Name)
-		// update status
-		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Progressing",
-			Message: "Permissions Operator (update) tasks are progressing",
-		})
-		bindings.Subjects = subs
-
-		permsrolebinding = r.updateStatus(ctx, permsrolebinding, req)
-		err = r.Update(ctx, bindings)
-		if err != nil {
-			logger.Error(err, "Failed to update RoleBinding", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
-			permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Available",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Available",
-				Message: "Permissions Operator is available",
-			})
-			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Progressing",
-				Status:  metav1.ConditionFalse,
-				Reason:  "Progressing",
-				Message: "No Permissions Operator tasks are progressing",
-			})
-			meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-				Type:    "Degraded",
-				Status:  metav1.ConditionTrue,
-				Reason:  "Degraded",
-				Message: "Permissions Operator (update) task are degraded",
-			})
-			r.updateStatus(ctx, permsrolebinding, req)
-			return ctrl.Result{}, err
+	} else {
+		// Check, if updates on immutable parts of rolebinding are configured
+		// if so - leave the reconcile loop
+		if bindings.RoleRef.Kind != permsrolebinding.Spec.Kind || bindings.RoleRef.Name != permsrolebinding.Spec.Role {
+			logger.Error(err, "Update immutable configuration (spec.kind || spec.Role)", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
+			setHoustonWeHaveAProblemStatus(ctx, &permsrolebinding.Status.Conditions)
+			if updateErr := r.Status().Update(ctx, permsrolebinding); updateErr != nil {
+				logger.Error(updateErr, "Update rolebinding status failed")
+			}
+			return ctrl.Result{Requeue: false}, err
 		}
-
-		r.updateCountsPermsRoleBinding(ctx, permsrolebinding, req)
-		//return ctrl.Result{Requeue: true}, nil
-	} else if !(errors.IsNotFound(err)) {
-		permsrolebinding = r.refreshPermsRoleBinding(ctx, permsrolebinding, req)
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Available",
-			Status:  metav1.ConditionTrue,
-			Reason:  "Available",
-			Message: "Permissions Operator is available",
-		})
-		meta.SetStatusCondition(&permsrolebinding.Status.Conditions, metav1.Condition{
-			Type:    "Progressing",
-			Status:  metav1.ConditionFalse,
-			Reason:  "Progressing",
-			Message: "No Permissions Operator tasks are progressing",
-		})
-		r.updateStatus(ctx, permsrolebinding, req)
+		// Update rolebinding if possible
+		subs := subsForPermsRoleBindings(permsrolebinding)
+		if !reflect.DeepEqual(bindings.Subjects, subs) {
+			logger.Info("Updating rolebinding", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
+			setProgressingStatus(ctx, &permsrolebinding.Status.Conditions)
+			bindings.Subjects = subs
+			if err := r.Update(ctx, bindings); err != nil {
+				logger.Error(err, "Failed to update RoleBinding", "Rolebinding.Namespace", permsrolebinding.Namespace, "Rolebinding.Name", permsrolebinding.Name)
+				setHoustonWeHaveAProblemStatus(ctx, &permsrolebinding.Status.Conditions)
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
+	// update the Resource Status
+	r.updateCountsPermsRoleBinding(ctx, permsrolebinding, req)
+	setEverythingIsFineStatus(ctx, &permsrolebinding.Status.Conditions)
+	if updateErr := r.Status().Update(ctx, permsrolebinding); updateErr != nil {
+		logger.Error(updateErr, "Update rolebinding status failed")
+	}
+	// return nil to stop reconcile loop
 	return ctrl.Result{}, nil
 }
 
 // rolebindingForPerms returns a Rolebinding object
 func (r *PermsRoleBindingReconciler) rolebindingForPerms(p *permsv1beta1.PermsRoleBinding, ctx context.Context) *rbacv1.RoleBinding {
-	//logger := log.FromContext(ctx)
-
 	// define labels
 	labels := labelsForPermsRoleBindings(p.Name)
 	subs := subsForPermsRoleBindings(p)
@@ -282,7 +136,9 @@ func (r *PermsRoleBindingReconciler) rolebindingForPerms(p *permsv1beta1.PermsRo
 	rb.Subjects = subs
 
 	// Set rolebindingForPermissions instance as the owner and controller
-	ctrl.SetControllerReference(p, rb, r.Scheme)
+	if err := ctrl.SetControllerReference(p, rb, r.Scheme); err != nil {
+		logger.Error(err, "Failed to set as owner")
+	}
 	return rb
 }
 
@@ -324,36 +180,16 @@ func subsForPermsRoleBindings(p *permsv1beta1.PermsRoleBinding) []rbacv1.Subject
 	return subs
 }
 
-// Update the status
-func (r *PermsRoleBindingReconciler) updateStatus(ctx context.Context, p *permsv1beta1.PermsRoleBinding, req ctrl.Request) *permsv1beta1.PermsRoleBinding {
-	err := r.Status().Update(ctx, p)
-	if err != nil {
-		logger.Error(err, "Unable to update Status")
-	}
-	time.Sleep(5 * time.Second)
-	p = r.refreshPermsRoleBinding(ctx, p, req)
-	return p
-}
-
-// Update the Perms custom ressource status
-func (r *PermsRoleBindingReconciler) refreshPermsRoleBinding(ctx context.Context, p *permsv1beta1.PermsRoleBinding, req ctrl.Request) *permsv1beta1.PermsRoleBinding {
-	permsrolebinding := &permsv1beta1.PermsRoleBinding{}
-	err := r.Get(ctx, req.NamespacedName, permsrolebinding)
-	if err != nil {
-		logger.Error(err, "Unable to update Cache")
-	}
-	return permsrolebinding
-}
-
+// compare "Status" with "Spec" and update the Status if needed
 func (r *PermsRoleBindingReconciler) updateCountsPermsRoleBinding(ctx context.Context, p *permsv1beta1.PermsRoleBinding, req ctrl.Request) {
-	p = r.refreshPermsRoleBinding(ctx, p, req)
 	if p.Status.Count.Users != strconv.Itoa(len(p.Spec.Users)) ||
 		p.Status.Count.Groups != strconv.Itoa(len(p.Spec.Groups)) ||
 		p.Status.Count.Serviceaccounts != strconv.Itoa(len(p.Spec.Serviceaccounts)) {
+
 		p.Status.Count.Users = strconv.Itoa(len(p.Spec.Users))
 		p.Status.Count.Groups = strconv.Itoa(len(p.Spec.Groups))
 		p.Status.Count.Serviceaccounts = strconv.Itoa(len(p.Spec.Serviceaccounts))
-		r.updateStatus(ctx, p, req)
+
 	}
 }
 

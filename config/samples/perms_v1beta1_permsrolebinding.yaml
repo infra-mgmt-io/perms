@@ -1,7 +1,7 @@
 apiVersion: perms.infra-mgmt.io/v1beta1
 kind: PermsRoleBinding
 metadata:
-  name: edit
+  name: permsrolebinding-sample
 spec:
   role: perms-leader-election-role
   kind: Role
