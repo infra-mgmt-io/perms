@@ -17,8 +17,13 @@ limitations under the License.
 package controllers
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,6 +45,13 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+
+const operatorImage = "example.com/infra-mgmt-io-perms:0.0.1"
+const podAppLabel = "app.kubernetes.io/name=perms-controller-manager"
+const operatorNamespace = "perms-system"
+
+var err error
+var cmd *exec.Cmd
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -73,10 +85,94 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	By("building the operator image")
+	cmd := exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", operatorImage))
+	_, err = Run(cmd)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	By("loading the the operator image on the cluster")
+	err = loadImageToClusterWithName(operatorImage)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	By("creating operator namespace")
+	cmd = exec.Command("kubectl", "create", "ns", operatorNamespace)
+	_, err = Run(cmd)
+	Expect(err).To(Not(HaveOccurred()))
+
+	By("deploying the controller")
+	cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", operatorImage))
+	_, err = Run(cmd)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	By("validating that pod is still status.phase=Running")
+	getPodStatus := func() error {
+		cmd = exec.Command("kubectl", "get",
+			"pods", "-l", podAppLabel,
+			"-o", "jsonpath={.items[*].status}", "-n", operatorNamespace,
+		)
+		status, err := Run(cmd)
+		fmt.Println(string(status))
+		ExpectWithOffset(2, err).NotTo(HaveOccurred())
+		if !strings.Contains(string(status), "\"phase\":\"Running\"") {
+			return fmt.Errorf("perms pod in %s status", status)
+		}
+		return nil
+	}
+	EventuallyWithOffset(1, getPodStatus, 15*time.Second, time.Second).Should(Succeed())
+
 }, 60)
 
 var _ = AfterSuite(func() {
+	By("removing operator namespace")
+	cmd := exec.Command("kubectl", "delete", "ns", operatorNamespace)
+	_, _ = Run(cmd)
+
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())
 })
+
+// run executes the provided command within this context
+func Run(cmd *exec.Cmd) ([]byte, error) {
+	dir, _ := GetProjectDir()
+	cmd.Dir = dir
+	fmt.Fprintf(GinkgoWriter, "running dir: %s\n", cmd.Dir)
+
+	// To allow make commands be executed from the project directory which is subdir on SDK repo
+	// TODO:(user) You might does not need the following code
+	if err := os.Chdir(cmd.Dir); err != nil {
+		fmt.Fprintf(GinkgoWriter, "chdir dir: %s\n", err)
+	}
+
+	cmd.Env = append(os.Environ(), "GO111MODULE=on")
+	command := strings.Join(cmd.Args, " ")
+	fmt.Fprintf(GinkgoWriter, "running: %s\n", command)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return output, fmt.Errorf("%s failed with error: (%v) %s", command, err, string(output))
+	}
+
+	return output, nil
+}
+
+// GetProjectDir will return the directory where the project is
+func GetProjectDir() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return wd, err
+	}
+	wd = strings.Replace(wd, "/controllers", "", -1)
+	return wd, nil
+}
+
+// LoadImageToKindCluster loads a local docker image to the kind cluster
+func loadImageToClusterWithName(name string) error {
+	cluster := "kind"
+	if v, ok := os.LookupEnv("KIND_CLUSTER"); ok {
+		cluster = v
+	}
+	kindOptions := []string{"load", "docker-image", name, "--name", cluster}
+	cmd := exec.Command("kind", kindOptions...)
+	_, err := Run(cmd)
+	return err
+}

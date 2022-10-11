@@ -145,3 +145,15 @@ To set up a successful release we need several parts:
 3. Create Github Release
    [Github Release Docs](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
 
+
+## Testing
+
+The Operator can be tested on a developers machine by using `kind` and the skd-test-suite.
+
+The test-suite will deploy a operator to the local cluster.
+This operator is then used to apply different operations on the CRD's provided.
+
+``` shell
+kind create cluster
+make test
+```

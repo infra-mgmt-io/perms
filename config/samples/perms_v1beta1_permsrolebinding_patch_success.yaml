@@ -1,0 +1,13 @@
+spec:
+  groups:
+    - group1
+    - group2
+    - group3
+    - group594933
+    - group12
+    - group1337
+  user:
+    - user1
+    - user2
+    - user3
+    - user5
