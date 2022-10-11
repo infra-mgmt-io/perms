@@ -1,4 +1,6 @@
-catalog_image: docker.io/kamleitermichael/perms-catalog:v0.0.1
+startingCSV: perms.v0.0.2
+catalog_image: ghcr.io/infra-mgmt-io/perms-catalog:v0.0.2
 catalog_namespace: olm
 catalog_name:  perms-operators
-subscription_channel: alpha
+subscription_channel: develop
+installPlanApproval: Manual

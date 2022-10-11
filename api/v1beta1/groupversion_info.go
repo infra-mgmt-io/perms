@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1beta1 contains API Schema definitions for the perms v1beta1 API group
-//+kubebuilder:object:generate=true
-//+groupName=perms.infra-mgmt.io
+// +kubebuilder:object:generate=true
+// +groupName=perms.infra-mgmt.io
 package v1beta1
 
 import (

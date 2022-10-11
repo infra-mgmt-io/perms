@@ -5,7 +5,11 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'v*.*.*'
+      - '*.*.*'
+    branches:
+      - 'main'
+      - 'develop'
+      - 'feat/*'
 defaults:
   run:
     shell: bash
@@ -39,6 +43,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: get version to build
+        if: "contains(github.ref_type, 'branch')"
+        run: |
+          echo "RELEASEVERSION=0.0.1-$(echo ${{ github.ref_name}} | tr '/' '-')" >> $GITHUB_ENV
+      - name: get version to build
+        if: "contains(github.ref_type, 'tag')"
+        run: echo "RELEASEVERSION=${{ github.ref_name }}" >> $GITHUB_ENV
       - name: Set up Operator SDK
         run: |
           export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac) && \
@@ -51,26 +62,23 @@ jobs:
           gpg -u "Operator SDK (release) <cncf-operator-sdk@cncf.io>" --verify checksums.txt.asc && \
           grep operator-sdk_${OS}_${ARCH} checksums.txt | sha256sum -c - && \
           chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
-      - name: Docker meta
-        id: tagging # you'll use this in the next step
-        uses: docker/metadata-action@v3
-        with:
-          # list of Docker images to use as base name for tags
-          images: |
-            ghcr.io/infra-mgmt-io/perms-bundle
-          # Docker tags based on the following events/attributes
-          tags: |
-            type=schedule
-            type=semver,pattern={{raw}}
-            type=sha
-      - name: Operator bundle verify
-        run: operator-sdk bundle validate ./bundle
-      - name: Build and push
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: bundle.Dockerfile
-          platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.tagging.outputs.tags }}
-          labels: ${{ steps.tagging.outputs.labels }}
+      - name: build operator bundle
+        run: |
+          export WORKINGDIR=`pwd`
+          export LOCALBIN=${WORKINGDIR}/bin/
+          export VERSION=${{ env.RELEASEVERSION}}
+          source .pipelineenv
+          mkdir -p ${LOCALBIN}
+          rm -f ${LOCALBIN}/kustomize
+          curl -s ${KUSTOMIZE_INSTALL_SCRIPT} | bash -s -- ${KUSTOMIZE_VERSION} ${LOCALBIN}
+          operator-sdk generate kustomize manifests -q
+          cd config/manager && ${LOCALBIN}kustomize edit set image controller=${IMG}
+          cd ../../
+          ${LOCALBIN}kustomize build config/manifests | operator-sdk generate bundle ${BUNDLE_GEN_FLAGS}
+          operator-sdk bundle validate ./bundle
+          docker build -f bundle.Dockerfile -t ${BUNDLE_IMG} .
+          docker push ${BUNDLE_IMG}
+          curl -sSLo ${LOCALBIN}opm https://github.com/operator-framework/operator-registry/releases/download/v1.26.1/linux-amd64-opm
+          chmod +x ${LOCALBIN}opm
+          ${LOCALBIN}opm index add --container-tool docker --mode semver --tag ${CATALOG_IMG} --bundles ${BUNDLE_IMG}
+          docker push ${CATALOG_IMG}
