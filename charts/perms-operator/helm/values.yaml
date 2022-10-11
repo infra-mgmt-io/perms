@@ -1,5 +1,5 @@
-startingCSV: perms.0.0.4
-catalog_image: ghcr.io/infra-mgmt-io/perms-catalog:0.0.4
+startingCSV: perms.v0.0.6
+catalog_image: ghcr.io/infra-mgmt-io/perms-catalog:0.0.6
 catalog_namespace: olm
 catalog_name:  perms-operators
 subscription_channel: develop
